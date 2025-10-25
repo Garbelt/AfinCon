@@ -79,7 +79,7 @@ table > tr:nth-child(2) > td:first-child { border-right: 0; width: 70%; padding:
                 <div id="panel">
                     <div id="actualUsername"></div>
                     <br>
-                    <div id="reloj">Tiempo: 01:00</div>
+                    <div id="reloj">Tiempo: 02:30</div>
                     <div id="errores">Errores: 0/5</div>
                 </div>
             </td>
@@ -142,7 +142,7 @@ table > tr:nth-child(2) > td:first-child { border-right: 0; width: 70%; padding:
   let currentInstrumentAudio = null;
   let correctAnswers = 0;
   let currentInstrument;
-  let totalTimeInSeconds = 180;
+  let totalTimeInSeconds = 150;
   let errors = 0;
   let timerInterval;
 
@@ -174,11 +174,11 @@ table > tr:nth-child(2) > td:first-child { border-right: 0; width: 70%; padding:
   // === Funciones de juego ===
 function startGame() {
     endGameExecuted = false;
-    totalTimeInSeconds = 180;
+    totalTimeInSeconds = 150;
     errors = 0;
     correctAnswers = 0;
     score = 0;
-    document.getElementById("reloj").textContent = "Tiempo: 03:00";
+    document.getElementById("reloj").textContent = "Tiempo: 02:30";
     updateErrorsDisplay();
     shuffleInstruments();
     disableClicks();
@@ -362,3 +362,4 @@ document.getElementById("start-button").addEventListener("click", function() {
 </script>
 </body>
 </html>
+
