@@ -207,7 +207,7 @@ async function verificarHabilitacion(uid, juegoCode) {
 
 // ===== Cargar todo: login + paso + habilitación =====
 async function cargarTodo() {
-  const juegoCode = "FOLK_sdl";
+  const juegoCode = "TM_rcnc";
 
   firebase.auth().onAuthStateChanged(async (user) => {
     // 1️⃣ Login
@@ -292,3 +292,4 @@ window.addEventListener("load", () => { cargarTodo(); });
 </script>
 </body>
 </html>
+
