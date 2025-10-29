@@ -1,0 +1,394 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SRAD - Sistema de Registro y Almacenamiento de Datos</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  margin: 0;
+  background-color: #f9f9f9;
+}
+
+.container {
+  border: 2px solid #ccc;
+  border-radius: 10px;
+  padding: 20px;
+  width: 95%;
+  max-width: 1000px;
+  margin-top: 20px;
+  background: white;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+  h2 {
+    text-align: center;
+    margin: 0;
+    font-size: 20px;
+  }
+
+  .subtitulo {
+    margin: 0;
+    text-align: center;
+    font-weight: normal;
+    margin-bottom: 10px;
+  }
+
+  .filters {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+    gap: 20px;
+    flex-wrap: wrap;
+  }
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: 800px;
+}
+
+thead th {
+  border: 1px solid #ddd;
+  padding: 6px;
+  text-align: center;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 5px;
+  text-align: center;
+}
+
+thead tr:first-child th {
+  position: sticky;
+  top: 0;
+  background-color: #004080;
+  color: white;
+  z-index: 2;
+}
+
+thead tr:nth-child(2) th {
+  position: sticky;
+  top: 28px;
+  background-color: #004080;
+  color: white;
+  z-index: 1;
+}
+
+tbody tr:nth-child(even) { background-color: #f2f2f2; }
+tbody tr:hover { background-color: #e0f0ff; }
+
+.action-buttons button {
+  width: 100%;
+  margin: 2px 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: none;
+  color: white;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.logout-button {
+  width: 150px; /* ancho fijo igual para ambos */
+  padding: 8px 0; /* solo padding vertical, horizontal no influye */
+  font-size: 13px;
+  border-radius: 5px;
+  background-color: #2980b9;
+  color: white;
+  border: none;
+  cursor: pointer;
+  text-align: center;
+}
+.logout-button:hover {
+    background-color: #3498db;
+}
+
+
+#backBtn {
+    background-color: #ddd;
+    color: black;  /* distinto color solo para el botón volver */
+}
+#backBtn:hover {
+    background-color: #bbb;
+}
+
+
+tr.inactive td {
+  background-color: #f9d6d5;
+  color: #aa0000;
+  text-decoration: line-through;
+}
+
+tr.inactive .action-buttons button {
+  opacity: 1;
+  color: white;
+}
+</style>
+
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.10.0/firebase-auth-compat.js"></script>
+</head>
+<body>
+<div class="container">
+  <h2>SRAD - Sistema de Registro y Almacenamiento de Datos</h2>
+  <div class="subtitulo">
+    Docente: <span id="docenteNombre"></span> / Escuela: <span id="escuelaNombre"></span>
+  </div>
+
+<div class="filters">
+  <label>Curso:
+    <select id="filterCurso"><option value="">Todos</option></select>
+  </label>
+  <label style="margin-left:20px;">
+    <input type="checkbox" id="showInactive" checked> Mostrar usuarios inactivos
+  </label>
+</div>
+
+<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+  <button id="backBtn" class="logout-button" onclick="goBack()">⬅ Volver al menú</button>
+  <button class="logout-button" onclick="logout()">🚪 Cerrar sesión</button>
+</div>
+
+<div class="table-wrapper">
+<table>
+<thead>
+  <tr style="position: sticky; top: 0; z-index: 2;">
+    <th rowspan="2">#</th>
+    <th rowspan="2">Nombre y Apellido</th>
+    <th rowspan="2">Usuario</th>
+    <th rowspan="2">Escuela</th>
+    <th rowspan="2">Curso</th>
+    <th colspan="3">Permisos</th>
+    <th rowspan="2">Oculto</th>
+    <th rowspan="2">Acción</th>
+  </tr>
+  <tr>
+    <th>Propio</th>
+    <th>Curso</th>
+    <th>Escuela</th>
+  </tr>
+  <tr>
+    <th colspan="10" style="height: 1px; background: white; border: none; padding: 0;"></th>
+  </tr>
+</thead>
+<tbody id="usersList">
+<tr><td colspan="10">Cargando usuarios...</td></tr>
+</tbody>
+</table>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBVZaysx9d6u6P13DYINPtcinpf79Sgx4U",
+  authDomain: "juego001-469b6.firebaseapp.com",
+  databaseURL: "https://juego001-469b6-default-rtdb.firebaseio.com",
+  projectId: "juego001-469b6",
+  storageBucket: "juego001-469b6.appspot.com",
+  messagingSenderId: "528847999661",
+  appId: "1:528847999661:web:6085a104fe64262a042c24"
+};
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+const auth = firebase.auth();
+
+
+const docenteNombre = (localStorage.getItem('nombreApellido') || '').toUpperCase();
+const escuelaNombre = localStorage.getItem('tipoEscuela') || '';
+document.getElementById('docenteNombre').textContent = docenteNombre;
+document.getElementById('escuelaNombre').textContent = escuelaNombre;
+
+let allUsers = [];
+let escuelaActual = "";
+
+// === Verificación de acceso ===
+(async function verificarAcceso() {
+  const uid = localStorage.getItem("uid");
+  if (!uid) {
+    alert("Debes iniciar sesión primero.");
+    window.location.href = "../index.html";
+    return;
+  }
+
+  try {
+    const snapshot = await database.ref("usuarios/" + uid).once("value");
+    const userData = snapshot.val();
+
+    if (!userData) {
+      alert("Usuario no registrado en el sistema.");
+      window.location.href = "../index.html";
+      return;
+    }
+
+    const autorizado =
+      userData.rol === "administrador" ||
+      (userData.rol === "docente" && userData.activo === true && userData.curso === "DOCENTE");
+
+    if (autorizado) {
+      console.log("✅ Acceso autorizado:", userData.nombreApellido, "-", userData.rol);
+      escuelaActual = userData.tipoEscuela || "";
+      loadUsers();
+    } else {
+      alert("Acceso restringido: solo docentes activos o administradores pueden ingresar.");
+      window.location.href = "../index.html";
+    }
+  } catch (error) {
+    console.error("Error al verificar usuario:", error);
+    alert("Error al verificar usuario.");
+    window.location.href = "../index.html";
+  }
+})();
+
+// === Cargar usuarios ===
+async function getUsersFromFirebase() {
+  try {
+    const snapshot = await database.ref("usuarios").once("value");
+    const data = snapshot.val() || {};
+    return Object.entries(data).map(([key, value]) => ({
+      userKey: key,
+      nombreApellido: value.nombreApellido || "",
+      usuario: value.usuario || key,
+      tipoEscuela: value.tipoEscuela || "",
+      curso: value.curso || "",
+      permiso: (value.permiso !== undefined && value.permiso !== null) ? value.permiso : "propio",
+      oculto: !!value.oculto,
+      activo: value.activo !== false
+    }));
+  } catch(err) {
+    console.error("Error al leer usuarios:", err);
+    return [];
+  }
+}
+
+function logout() {
+  localStorage.clear();
+  auth.signOut().then(() => window.location.href = "../index.html");
+}
+
+function renderUsers(users) {
+  const tbody = document.getElementById("usersList");
+  tbody.innerHTML = "";
+  const showInactive = document.getElementById("showInactive").checked;
+  const finalUsers = users.filter(u => showInactive || u.activo);
+
+  if (!finalUsers.length) {
+    tbody.innerHTML = `<tr><td colspan="10">No hay usuarios que coincidan.</td></tr>`;
+    return;
+  }
+
+  finalUsers.forEach((user, index) => {
+    const row = document.createElement("tr");
+    if (!user.activo) row.classList.add("inactive");
+
+    row.innerHTML = `
+      <td>${index + 1}</td>
+      <td>${user.nombreApellido}</td>
+      <td>${user.usuario}</td>
+      <td>${user.tipoEscuela}</td>
+      <td>${user.curso}</td>
+      <td><input type="radio" name="perm-${user.userKey}" value="propio" ${user.permiso==='propio'?'checked':''}></td>
+      <td><input type="radio" name="perm-${user.userKey}" value="curso" ${user.permiso==='curso'?'checked':''}></td>
+      <td><input type="radio" name="perm-${user.userKey}" value="escuela" ${user.permiso==='escuela'?'checked':''}></td>
+      <td><input type="checkbox" ${user.oculto ? "checked" : ""}></td>
+      <td class="action-buttons"></td>
+    `;
+
+    const actionsCell = row.querySelector(".action-buttons");
+    const infoBtn = document.createElement("button");
+    infoBtn.textContent = "Ver Informe";
+    infoBtn.style.backgroundColor = "#337ab7";
+    infoBtn.onclick = () => window.location.href = "reg.html?username=" + encodeURIComponent(user.userKey);
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.textContent = user.activo ? "Desactivar" : "Activar";
+    toggleBtn.style.backgroundColor = user.activo ? "#e74c3c" : "#27ae60";
+    toggleBtn.onclick = async () => {
+      try {
+        await database.ref("usuarios/" + user.userKey).update({ activo: !user.activo });
+        loadUsers();
+      } catch (err) {
+        alert("Error al actualizar estado: " + err.message);
+      }
+    };
+
+    actionsCell.append(infoBtn, toggleBtn);
+
+    // ✅ Radios de permiso con escritura segura
+    row.querySelectorAll(`input[type=radio][name=perm-${user.userKey}]`).forEach(r => {
+      r.addEventListener('change', async () => {
+        try {
+          await database.ref("usuarios/" + user.userKey).update({ permiso: r.value });
+          user.permiso = r.value;
+        } catch (err) {
+          alert("Error al actualizar permiso: " + err.message);
+        }
+      });
+    });
+
+    // ✅ Checkbox oculto con escritura segura
+    const ocultoCheckbox = row.querySelector('td:nth-child(9) input');
+    ocultoCheckbox.addEventListener('change', async () => {
+      try {
+        await database.ref("usuarios/" + user.userKey).update({ oculto: ocultoCheckbox.checked });
+        user.oculto = ocultoCheckbox.checked;
+      } catch (err) {
+        alert("Error al actualizar oculto: " + err.message);
+        ocultoCheckbox.checked = !ocultoCheckbox.checked;
+      }
+    });
+
+    tbody.appendChild(row);
+  });
+}
+
+function applyFilters() {
+  const curso = document.getElementById("filterCurso").value;
+  let filtered = allUsers;
+  if (curso) filtered = filtered.filter(u => u.curso === curso);
+  renderUsers(filtered);
+}
+
+function populateFilters() {
+  const cursoSelect = document.getElementById("filterCurso");
+  const cursos = [...new Set(allUsers.map(u => u.curso).filter(c => c))].sort();
+  cursoSelect.innerHTML = '<option value="">Todos</option>'+cursos.map(c=>`<option value="${c}">${c}</option>`).join('');
+  cursoSelect.addEventListener("change", applyFilters);
+}
+
+document.getElementById("showInactive").addEventListener("change", applyFilters);
+
+async function loadUsers() {
+  allUsers = await getUsersFromFirebase();
+  
+  // Filtrar solo usuarios de la misma escuela que el docente
+  allUsers = allUsers.filter(u => u.tipoEscuela === escuelaActual);
+  populateFilters();
+  applyFilters();
+}
+
+// Volver al menú anterior
+document.getElementById('backBtn').addEventListener('click', () => {
+  window.location.href = "ActDocente.html";
+});
+
+</script>
+</body>
+</html>
